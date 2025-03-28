@@ -34,11 +34,13 @@ bool appendEscapedJS(string& ret, const CHARSET_INFO* retCS, const utils::NullSt
   if ((strLen = json_escape(retCS, (const uchar*)rawJS, (const uchar*)rawJS + jsLen, jsCS, (uchar*)buf,
                             (uchar*)buf + strLen)) >= 0)
   {
+    //handle strLen == 0 case, since it is valid value
+    //seems like handled here, but not in previous version as per commit
     buf[strLen] = '\0';
     ret.append(buf, strLen);
     return false;
   }
-
+  
   return true;
 }
 

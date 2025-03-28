@@ -28,6 +28,9 @@ CalpontSystemCatalog::ColType Func_json_object::operationType(FunctionParm& fp,
 string Func_json_object::getStrVal(rowgroup::Row& row, FunctionParm& fp, bool& isNull,
                                    execplan::CalpontSystemCatalog::ColType& type)
 {
+
+  //handle empty string. Its still a valid string. We should not return NULL
+  
   if (fp.size() == 0)
     return "{}";
 

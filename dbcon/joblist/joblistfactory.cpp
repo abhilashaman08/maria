@@ -1757,17 +1757,34 @@ void parseExecutionPlan(CalpontSelectExecutionPlan* csep, JobInfo& jobInfo, JobS
 void makeVtableModeSteps(CalpontSelectExecutionPlan* csep, JobInfo& jobInfo, JobStepVector& querySteps,
                          JobStepVector& projectSteps, DeliveredTableMap& deliverySteps)
 {
-  // special case for outer query order by limit -- return all
+
+  // calling csep->hasOrderBy() will crash if csep==nullptr
+  // fix: Validate input pointer
+  if (!csep) {
+        throw std::invalid_argument("Null pointer: csep is nullptr");
+  }	
+
+  // special case for outer query order by limit -- return all	
   if (jobInfo.subId == 0 && csep->hasOrderBy() && !csep->specHandlerProcessed())
   {
-    jobInfo.limitCount = (uint64_t)-1;
+    jobInfo.limitCount = static_cast<uint64_t>(-1);
   }
   // support order by and limit in sub-query/union or
   // GROUP BY handler processed outer query order
-  else if (csep->orderByCols().size() > 0)
-  {
+  //else if (csep->orderByCols().size() > 0)
+  //{
+   // addOrderByAndLimit(csep, jobInfo);
+  //}
+
+	  
+  //If csep == nullptr, calling csep->orderByCols() will crash.
+  //If csep was deleted elsewhere, accessing it can lead to undefined behavior.	
+  //If orderByCols() is returning a reference to an invalidated vector, size() can crash.	 
+  //Fix: Add a nullptr check before accessing it.  	  
+  else if (csep && !csep->orderByCols().empty()) {
     addOrderByAndLimit(csep, jobInfo);
-  }
+  }	  
+	  
   // limit without order by in any query
   else
   {
@@ -1782,7 +1799,19 @@ void makeVtableModeSteps(CalpontSelectExecutionPlan* csep, JobInfo& jobInfo, Job
   uint16_t stepNo = jobInfo.subId * 10000;
   numberSteps(querySteps, stepNo, jobInfo.traceFlags);
   //	SJSTEP ds = deliverySteps.begin()->second;
-  idbassert(deliverySteps.begin()->second.get());
+
+  //Ensures deliverySteps is not empty before accessing begin().
+  // fix: Validate deliverySteps before accessing it
+ if (!deliverySteps.empty()) {
+	auto it = deliverySteps.begin();
+	if (it != deliverySteps.end() && it->second) {
+	    idbassert(it->second.get());
+	} else {
+	    throw std::runtime_error("deliverySteps contains an invalid entry");
+	}
+  } else {
+	throw std::runtime_error("deliverySteps is empty");
+  }
   //	ds->stepId(stepNo);
   //	ds->setTraceFlags(jobInfo.traceFlags);
 }
